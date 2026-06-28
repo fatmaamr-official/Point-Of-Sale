@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 150 10% 98%;
+    --foreground: 160 20% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 20% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 20% 10%;
+    --primary: 160 84% 28%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 155 15% 93%;
+    --secondary-foreground: 160 20% 15%;
+    --muted: 150 10% 95%;
+    --muted-foreground: 160 10% 45%;
+    --accent: 155 15% 93%;
+    --accent-foreground: 160 20% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 10% 90%;
+    --input: 150 10% 90%;
+    --ring: 160 84% 28%;
+    --radius: 0.625rem;
+
+    --sidebar-background: 160 20% 10%;
+    --sidebar-foreground: 150 10% 85%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 160 20% 15%;
+    --sidebar-accent-foreground: 150 10% 90%;
+    --sidebar-border: 160 15% 18%;
+    --sidebar-ring: 160 84% 39%;
+
+    --success: 152 69% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 210 80% 52%;
+    --info-foreground: 0 0% 100%;
+
+    --chart-1: 160 84% 28%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 155 40% 60%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 72% 51%;
+  }
+
+  .dark {
+    --background: 160 20% 6%;
+    --foreground: 150 10% 92%;
+    --card: 160 18% 9%;
+    --card-foreground: 150 10% 92%;
+    --popover: 160 18% 9%;
+    --popover-foreground: 150 10% 92%;
+    --primary: 160 72% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 160 15% 14%;
+    --secondary-foreground: 150 10% 85%;
+    --muted: 160 12% 14%;
+    --muted-foreground: 150 8% 55%;
+    --accent: 160 15% 14%;
+    --accent-foreground: 150 10% 85%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 160 12% 16%;
+    --input: 160 12% 16%;
+    --ring: 160 72% 42%;
+
+    --sidebar-background: 160 22% 5%;
+    --sidebar-foreground: 150 10% 80%;
+    --sidebar-primary: 160 72% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 160 18% 10%;
+    --sidebar-accent-foreground: 150 10% 85%;
+    --sidebar-border: 160 15% 12%;
+    --sidebar-ring: 160 72% 42%;
+
+    --success: 152 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 55%;
+    --warning-foreground: 0 0% 100%;
+    --info: 210 70% 58%;
+    --info-foreground: 0 0% 100%;
+
+    --chart-1: 160 72% 42%;
+    --chart-2: 160 50% 55%;
+    --chart-3: 155 35% 65%;
+    --chart-4: 38 85% 55%;
+    --chart-5: 0 62% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
