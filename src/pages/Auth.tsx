@@ -30,10 +30,14 @@ export default function Auth() {
   }, [user, role, navigate]);
 
   const handleLogin = async () => {
+    console.log("Login started");
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log('LOGIN DATA:', data);
+      console.log('LOGIN ERROR:', error);
       if (error) {
+        console.error('LOGIN ERROR:', error);
         const normalized = error.message.toLowerCase();
         if (normalized.includes('invalid login credentials')) {
           toast.error('Invalid login credentials');
@@ -46,6 +50,7 @@ export default function Auth() {
       }
 
       if (!data.user) {
+        console.error('Authentication failed.');
         toast.error('Authentication failed.');
         return;
       }
@@ -65,11 +70,13 @@ export default function Auth() {
       console.log("EMPLOYEE ERROR:", employeeError);
 
       if (employeeError) {
+        console.error('EMPLOYEE ERROR:', employeeError);
         toast.error(employeeError.message);
         return;
       }
 
       if (!employee) {
+        console.error('Employee not found');
         toast.error("Employee not found");
         return;
       }

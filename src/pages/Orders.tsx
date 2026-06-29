@@ -93,7 +93,16 @@ export default function Orders() {
     if (editItems.length === 0) return toast.error(t('addAtLeastOneItem'));
 
     if (editingOrder) {
-      updateOrder.mutate({ dbId: editingOrder.dbId, paymentMethod: editPayment, customerName: editCustomer || undefined }, {
+      updateOrder.mutate({
+        dbId: editingOrder.dbId,
+        items: editItems,
+        subtotal: calcSubtotal(),
+        tax: calcTax(),
+        discount: 0,
+        total: calcTotal(),
+        paymentMethod: editPayment,
+        customerName: editCustomer || undefined,
+      }, {
         onSuccess: () => toast.success(t('orderUpdated')),
         onError: (e) => toast.error(getErrorMessage(e)),
       });

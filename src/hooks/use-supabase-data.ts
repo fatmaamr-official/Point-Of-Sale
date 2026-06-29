@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
 type AppRole = Database['public']['Enums']['app_role'];
 type OrderRow = Database['public']['Tables']['orders']['Row'];
@@ -100,7 +101,7 @@ export function useProducts() {
     queryFn: async ({ signal }) => {
       const { data, error } = await db
         .from('products')
-        .select('*')
+        .select('*, categories(name)')
         .order('name')
         .abortSignal(signal);
       if (error) throw error;
@@ -112,8 +113,8 @@ export function useProducts() {
         price: Number(p.price),
         cost: Number(p.cost),
         stock: Number(p.stock),
-        categoryId: p.category ?? null,
-        categoryName: p.category ?? 'Uncategorized',
+        categoryId: p.category_id ?? null,
+        categoryName: p.categories?.name ?? p.categories?.[0]?.name ?? 'Uncategorized',
         image: p.image,
         lowStockThreshold: p.low_stock_threshold,
       })) as ProductListItem[];
@@ -134,7 +135,7 @@ export function useProductMutations() {
         price: p.price,
         cost: p.cost,
         stock: p.stock,
-        category: p.categoryId,
+        category_id: p.categoryId,
         low_stock_threshold: p.lowStockThreshold,
       });
       if (error) throw error;
@@ -153,7 +154,7 @@ export function useProductMutations() {
       if (data.price !== undefined) updatePayload.price = data.price;
       if (data.cost !== undefined) updatePayload.cost = data.cost;
       if (data.stock !== undefined) updatePayload.stock = data.stock;
-      if (data.categoryId !== undefined) updatePayload.category = data.categoryId;
+      if (data.categoryId !== undefined) updatePayload.category_id = data.categoryId;
       if (data.lowStockThreshold !== undefined) updatePayload.low_stock_threshold = data.lowStockThreshold;
       const { error } = await db.from('products').update(updatePayload).eq('id', id);
       if (error) throw error;
@@ -171,21 +172,27 @@ export function useProductMutations() {
 
   return { addProduct, updateProduct, deleteProduct };
 }
-
 // ─── Orders ───
 export function useOrders() {
-  type OrderWithItems = OrderRow & { order_items: OrderItemRow[] | null };
+  type OrderWithItems = OrderRow & {
+    order_items: OrderItemRow[] | null;
+  };
 
   return useQuery({
     queryKey: ['orders'],
     queryFn: async ({ signal }) => {
       const response = await supabase
         .from('orders')
-        .select('*, order_items(*)')
+        .select('*, order_items!order_items_order_id_fkey(*)')
         .order('created_at', { ascending: false })
         .abortSignal(signal);
+
       if (response.error) throw response.error;
+
       const data = (response.data ?? []) as OrderWithItems[];
+
+      console.log('RAW SUPABASE ORDERS RESPONSE:', data);
+
       return data.map((o) => ({
         id: o.order_number,
         dbId: o.id,
@@ -208,7 +215,6 @@ export function useOrders() {
     },
   });
 }
-
 export function useOrderMutations() {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -261,21 +267,82 @@ export function useOrderMutations() {
   });
 
   const updateOrder = useMutation({
-    mutationFn: async ({ dbId, ...data }: { dbId: string; status?: string; paymentMethod?: string; customerName?: string }) => {
+    mutationFn: async ({ dbId, ...data }: {
+      dbId: string;
+      status?: string;
+      paymentMethod?: string;
+      customerName?: string;
+      items?: { productId: string; name: string; quantity: number; price: number }[];
+      subtotal?: number;
+      tax?: number;
+      discount?: number;
+      total?: number;
+    }) => {
       const updatePayload: OrderUpdate = {};
       if (data.status !== undefined) updatePayload.status = data.status;
       if (data.paymentMethod !== undefined) updatePayload.payment_method = data.paymentMethod;
       if (data.customerName !== undefined) updatePayload.customer_name = data.customerName;
-      const { error } = await supabase.from('orders').update(updatePayload).eq('id', dbId);
-      if (error) throw error;
+
+      if (data.items !== undefined) {
+        const subtotal = data.subtotal ?? data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const tax = data.tax ?? subtotal * 0.09;
+        const total = data.total ?? subtotal + tax;
+
+        updatePayload.subtotal = subtotal;
+        updatePayload.tax = tax;
+        updatePayload.discount = data.discount ?? 0;
+        updatePayload.total = total;
+      }
+
+      console.log('Updating order:', dbId, updatePayload);
+      const { data: updatedOrder, error } = await supabase
+        .from('orders')
+        .update(updatePayload)
+        .eq('id', dbId)
+        .select('id')
+        .single();
+      console.log('Update result:', { data: updatedOrder, error });
+
+      if (error) {
+        toast.error(error.message);
+        throw error;
+      }
+
+      if (data.items !== undefined) {
+        const { error: deleteItemsError } = await supabase.from('order_items').delete().eq('order_id', dbId);
+        if (deleteItemsError) {
+          toast.error(deleteItemsError.message);
+          throw deleteItemsError;
+        }
+
+        const itemsToInsert = data.items.map((item) => ({
+          order_id: dbId,
+          product_id: item.productId,
+          product_name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        }));
+
+        const { data: insertedItems, error: insertItemsError } = await supabase.from('order_items').insert(itemsToInsert).select();
+        console.log('Inserted order items:', { data: insertedItems, error: insertItemsError });
+        if (insertItemsError) {
+          toast.error(insertItemsError.message);
+          throw insertItemsError;
+        }
+      }
     },
     onSuccess: invalidate,
   });
 
   const deleteOrder = useMutation({
     mutationFn: async (dbId: string) => {
-      const { error } = await supabase.from('orders').delete().eq('id', dbId);
-      if (error) throw error;
+      console.log('Deleting order:', dbId);
+      const { data, error } = await supabase.from('orders').delete().eq('id', dbId).select('id').single();
+      console.log('Delete result:', { data, error });
+      if (error) {
+        toast.error(error.message);
+        throw error;
+      }
     },
     onSuccess: invalidate,
   });

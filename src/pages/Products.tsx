@@ -48,6 +48,12 @@ const db = supabase as any;
 
 const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : 'Something went wrong');
 
+const isForeignKeyConstraintError = (error: unknown) => {
+  const message = typeof error === 'object' && error && 'message' in error ? String((error as { message?: string }).message ?? '') : '';
+  const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code ?? '') : '';
+  return code === '23503' || message.toLowerCase().includes('foreign key') || message.toLowerCase().includes('violates foreign key constraint');
+};
+
 export default function Products() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -90,7 +96,7 @@ export default function Products() {
     category_id: product.categoryId,
     created_at: '',
     low_stock_threshold: product.lowStockThreshold,
-    categories: product.categoryId ? { id: product.categoryId, name: product.categoryName } : null,
+    categories: product.categoryId ? { id: product.categoryId, name: product.categoryName || 'Uncategorized' } : null,
   })) as ProductRow[], [productItems]);
 
   const invalidateProducts = () => queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -100,6 +106,12 @@ export default function Products() {
       const { data, error } = await db.from('products').insert(payload).select();
       console.log("INSERT DATA:", data);
       console.log("INSERT ERROR:", error);
+      if (error) {
+        console.log("Message:", error.message);
+        console.log("Details:", error.details);
+        console.log("Hint:", error.hint);
+        console.log("Code:", error.code);
+      }
       if (error) throw error;
     },
     onSuccess: invalidateProducts,
@@ -109,6 +121,10 @@ export default function Products() {
     mutationFn: async ({ id, ...payload }: ProductPayload & { id: string }) => {
       const { error } = await db.from('products').update(payload).eq('id', id);
       console.log("UPDATE ERROR:", error);
+      console.log("UPDATE ERROR MESSAGE:", error?.message);
+      console.log("UPDATE ERROR DETAILS:", error?.details);
+      console.log("UPDATE ERROR HINT:", error?.hint);
+      console.log("UPDATE ERROR CODE:", error?.code);
       if (error) throw error;
     },
     onSuccess: invalidateProducts,
@@ -118,6 +134,10 @@ export default function Products() {
     mutationFn: async (id: string) => {
       const { error } = await db.from('products').delete().eq('id', id);
       console.log("DELETE ERROR:", error);
+      console.log("DELETE ERROR MESSAGE:", error?.message);
+      console.log("DELETE ERROR DETAILS:", error?.details);
+      console.log("DELETE ERROR HINT:", error?.hint);
+      console.log("DELETE ERROR CODE:", error?.code);
       if (error) throw error;
     },
     onSuccess: invalidateProducts,
@@ -156,8 +176,21 @@ export default function Products() {
       updateProduct.mutate(
         { id: editProduct.id, ...payload },
         {
-          onSuccess: () => toast.success(t('productUpdated')),
-          onError: (mutationError) => toast.error(getErrorMessage(mutationError)),
+          onSuccess: () => {
+            setDialogOpen(false);
+            setEditProduct(null);
+            invalidateProducts();
+            toast.success(t('productUpdated'));
+          },
+          onError: (mutationError) => {
+            const error = mutationError as { message?: string; details?: string; hint?: string; code?: string } | undefined;
+            console.log("UPDATE ERROR:", mutationError);
+            console.log("UPDATE ERROR MESSAGE:", error?.message);
+            console.log("UPDATE ERROR DETAILS:", error?.details);
+            console.log("UPDATE ERROR HINT:", error?.hint);
+            console.log("UPDATE ERROR CODE:", error?.code);
+            toast.error(error?.message ?? getErrorMessage(mutationError));
+          },
         },
       );
     } else {
@@ -165,16 +198,28 @@ export default function Products() {
         onSuccess: () => toast.success(t('productCreated')),
         onError: (mutationError) => toast.error(getErrorMessage(mutationError)),
       });
+      setDialogOpen(false);
+      setEditProduct(null);
     }
-
-    setDialogOpen(false);
-    setEditProduct(null);
   };
 
   const handleDelete = (id: string) => {
     deleteProduct.mutate(id, {
       onSuccess: () => toast.success(t('productDeleted')),
-      onError: (mutationError) => toast.error(getErrorMessage(mutationError)),
+      onError: (mutationError) => {
+        const error = mutationError as { message?: string; details?: string; hint?: string; code?: string } | undefined;
+        console.log("DELETE ERROR:", error);
+        console.log("DELETE ERROR MESSAGE:", error?.message);
+        console.log("DELETE ERROR DETAILS:", error?.details);
+        console.log("DELETE ERROR HINT:", error?.hint);
+        console.log("DELETE ERROR CODE:", error?.code);
+
+        if (isForeignKeyConstraintError(mutationError)) {
+          toast.error('Cannot delete this product because it has already been used in previous orders.');
+        } else {
+          toast.error(error?.message ?? getErrorMessage(mutationError));
+        }
+      },
     });
   };
 
