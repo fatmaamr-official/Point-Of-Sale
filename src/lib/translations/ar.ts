@@ -135,6 +135,7 @@ const ar = {
   attendanceLabel: 'الحضور',
   absencesLabel: 'الغياب',
   netSalary: 'صافي الراتب',
+  joinDate: 'تاريخ التعيين',
   email: 'البريد الإلكتروني',
   phone: 'الهاتف',
   active: 'نشط',

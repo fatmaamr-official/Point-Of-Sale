@@ -135,6 +135,7 @@ const en = {
   attendanceLabel: 'Attendance',
   absencesLabel: 'Absences',
   netSalary: 'Net Salary',
+  joinDate: 'Join Date',
   email: 'Email',
   phone: 'Phone',
   active: 'Active',

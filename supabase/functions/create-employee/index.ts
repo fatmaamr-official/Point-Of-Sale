@@ -40,7 +40,21 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { email, password, name, role = "cashier" } = body;
+    const {
+      email,
+      password,
+      name,
+      role = "cashier",
+      position,
+      salary = 0,
+      deductions = 0,
+      workingDays = 26,
+      attendance = 0,
+      absences = 0,
+      status = "active",
+      joinDate,
+      phone = null,
+    } = body;
 
     // 4. Validate required fields
     if (!email || !password || !name) {
@@ -82,15 +96,16 @@ Deno.serve(async (req: Request) => {
       id: userId,
       name: name.trim(),
       email: email.trim(),
+      phone,
       role: role.trim(),
-      position: 'Cashier',
-      salary: 0,
-      deductions: 0,
-      working_days: 26,
-      attendance: 0,
-      absences: 0,
-      status: 'active',
-      join_date: timestamp,
+      position: position?.trim() || 'Cashier',
+      salary: Number(salary) || 0,
+      deductions: Number(deductions) || 0,
+      working_days: Number(workingDays) || 26,
+      attendance: Number(attendance) || 0,
+      absences: Number(absences) || 0,
+      status: status?.trim() || 'active',
+      join_date: joinDate || new Date().toISOString().slice(0, 10),
       created_at: timestamp,
       user_id: userId,
     };

@@ -43,8 +43,9 @@ export interface EmployeeListItem {
   email: string;
   role: AppRole;
   createdAt: string;
-  position: string;
+  joinDate: string;
   phone: string | null;
+  position: string;
   salary: number;
   deductions: number;
   workingDays: number;
@@ -58,14 +59,15 @@ export interface CreateEmployeePayload {
   name: string;
   password: string;
   role: AppRole;
+  phone?: string | null;
   position: string;
   salary: number;
-  phone?: string | null;
   deductions?: number;
   workingDays?: number;
   attendance?: number;
   absences?: number;
   status?: string;
+  joinDate?: string;
 }
 
 export interface CreateEmployeeResponse {
@@ -385,8 +387,8 @@ export function useEmployees(canViewSensitive: boolean = true) {
           id: e.id,
           name: e.name,
           email: e.email,
-          phone: e.phone,
           role: e.role,
+          phone: e.phone ?? null,
           position: e.position,
           salary: Number(e.salary),
           deductions: Number(e.deductions),
@@ -395,6 +397,7 @@ export function useEmployees(canViewSensitive: boolean = true) {
           absences: Number(e.absences),
           status: e.status,
           createdAt: e.created_at,
+          joinDate: e.join_date ?? e.created_at ?? '',
           restricted: false,
         })) as EmployeeListItem[];
       }
@@ -405,8 +408,8 @@ export function useEmployees(canViewSensitive: boolean = true) {
         id: e.id ?? '',
         name: e.name ?? '',
         email: '',
-        phone: null,
         role: (e.role ?? 'cashier') as AppRole,
+        phone: null,
         position: e.position ?? '',
         salary: 0,
         deductions: 0,
@@ -415,6 +418,7 @@ export function useEmployees(canViewSensitive: boolean = true) {
         absences: 0,
         status: e.status ?? 'active',
         createdAt: e.created_at ?? '',
+        joinDate: e.join_date ?? e.created_at ?? '',
         restricted: true,
       })) as EmployeeListItem[];
     },
@@ -440,12 +444,12 @@ export function useEmployeeMutations() {
   });
 
   const updateEmployee = useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; email?: string; phone?: string | null; role?: AppRole; position?: string; salary?: number; deductions?: number; workingDays?: number; attendance?: number; absences?: number; status?: string }) => {
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; email?: string; role?: AppRole; phone?: string | null; position?: string; salary?: number; deductions?: number; workingDays?: number; attendance?: number; absences?: number; status?: string; joinDate?: string }) => {
       const updatePayload: EmployeeUpdate = {};
       if (data.name !== undefined) updatePayload.name = data.name;
       if (data.email !== undefined) updatePayload.email = data.email;
-      if (data.phone !== undefined) updatePayload.phone = data.phone;
       if (data.role !== undefined) updatePayload.role = data.role;
+      if (data.phone !== undefined) updatePayload.phone = data.phone;
       if (data.position !== undefined) updatePayload.position = data.position;
       if (data.salary !== undefined) updatePayload.salary = data.salary;
       if (data.deductions !== undefined) updatePayload.deductions = data.deductions;
@@ -453,6 +457,7 @@ export function useEmployeeMutations() {
       if (data.attendance !== undefined) updatePayload.attendance = data.attendance;
       if (data.absences !== undefined) updatePayload.absences = data.absences;
       if (data.status !== undefined) updatePayload.status = data.status;
+      if (data.joinDate !== undefined) updatePayload.join_date = data.joinDate;
       const { error } = await supabase.from('employees').update(updatePayload).eq('id', id);
       if (error) throw error;
     },
@@ -461,8 +466,13 @@ export function useEmployeeMutations() {
 
   const deleteEmployee = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('employees').delete().eq('id', id);
+      const { data, error } = await supabase.functions.invoke<{ success: boolean; error?: string }>('delete-employee', {
+        body: { employeeId: id },
+      });
       if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error ?? 'Failed to delete employee');
+      }
     },
     onSuccess: invalidate,
   });
