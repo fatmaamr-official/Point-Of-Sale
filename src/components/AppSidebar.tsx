@@ -9,6 +9,7 @@ import {
 import { useThemeStore } from '@/lib/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const navItems = {
   admin: [
@@ -87,20 +88,32 @@ const navItems = {
       url: '/categories',
       icon: Tags,
     },
-  ],
-
-  cashier: [
-    {
-      titleKey: 'pos',
-      label: 'POS',
-      url: '/pos',
-      icon: ShoppingCart,
-    },
     {
       titleKey: 'orders',
       label: 'Orders',
       url: '/orders',
       icon: ClipboardList,
+    },
+    {
+      titleKey: 'reports',
+      label: 'Reports',
+      url: '/reports',
+      icon: BarChart3,
+    },
+  ],
+
+  cashier: [
+    {
+      titleKey: 'dashboard',
+      label: 'Dashboard',
+      url: '/',
+      icon: LayoutDashboard,
+    },
+    {
+      titleKey: 'pos',
+      label: 'POS',
+      url: '/pos',
+      icon: ShoppingCart,
     },
   ],
 } as const;
@@ -111,6 +124,12 @@ export function AppSidebar() {
   const { isDark, toggle } = useThemeStore();
   const { signOut, role } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth', { replace: true });
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -159,7 +178,7 @@ export function AppSidebar() {
           {!collapsed && <span>{isDark ? t('lightMode') : t('darkMode')}</span>}
         </button>
         <button
-          onClick={signOut}
+          onClick={() => void handleSignOut()}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors duration-150"
         >
           <LogOut className="h-4 w-4" />

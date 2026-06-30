@@ -35,9 +35,9 @@ const App = () => (
               <Route path="/pos" element={<ProtectedRoute allowedRoles={['admin', 'manager', 'cashier']}><POS /></ProtectedRoute>} />
               <Route path="/products" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Products /></ProtectedRoute>} />
               <Route path="/categories" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Categories /></ProtectedRoute>} />
-              <Route path="/orders" element={<ProtectedRoute allowedRoles={['admin', 'cashier']}><Orders /></ProtectedRoute>} />
-              <Route path="/employees" element={<ProtectedRoute allowedRoles={['admin']}><Employees /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Orders /></ProtectedRoute>} />
+              <Route path="/employees" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Employees /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Reports /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><SettingsPage /></ProtectedRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />

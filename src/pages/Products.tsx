@@ -161,6 +161,11 @@ export default function Products() {
   const error = productsError || categoriesError;
 
   const handleSave = (formData: FormData) => {
+    if (!canEdit) {
+      toast.error(t('accessDenied') || 'Access denied');
+      return;
+    }
+
     const payload: ProductPayload = {
       name: String(formData.get('name') ?? '').trim(),
       barcode: String(formData.get('barcode') ?? '').trim() || null,
@@ -204,6 +209,11 @@ export default function Products() {
   };
 
   const handleDelete = (id: string) => {
+    if (!canDelete) {
+      toast.error(t('accessDenied') || 'Access denied');
+      return;
+    }
+
     deleteProduct.mutate(id, {
       onSuccess: () => toast.success(t('productDeleted')),
       onError: (mutationError) => {

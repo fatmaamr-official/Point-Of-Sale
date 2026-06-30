@@ -28,6 +28,7 @@ export default function Orders() {
   const { role } = useAuth();
   const addNotification = useNotificationStore((s) => s.addNotification);
   const canEdit = role === 'admin' || role === 'manager';
+  const canRefund = role === 'admin' || role === 'manager';
   const canDelete = role === 'admin';
 
   const [search, setSearch] = useState('');
@@ -90,6 +91,11 @@ export default function Orders() {
   };
 
   const handleSaveOrder = async () => {
+    if (!canEdit) {
+      toast.error(t('accessDenied') || 'Access denied');
+      return;
+    }
+
     if (editItems.length === 0) return toast.error(t('addAtLeastOneItem'));
 
     if (editingOrder) {
@@ -133,6 +139,11 @@ export default function Orders() {
   };
 
   const handleRefund = (order: any) => {
+    if (!canRefund) {
+      toast.error(t('accessDenied') || 'Access denied');
+      return;
+    }
+
     updateOrder.mutate({ dbId: order.dbId, status: 'refunded' }, {
       onSuccess: () => toast.success(t('refundProcessed', { id: order.id })),
       onError: (e) => toast.error(getErrorMessage(e)),
@@ -140,6 +151,11 @@ export default function Orders() {
   };
 
   const handleDelete = (order: any) => {
+    if (!canDelete) {
+      toast.error(t('accessDenied') || 'Access denied');
+      return;
+    }
+
     deleteOrder.mutate(order.dbId, {
       onSuccess: () => toast.success(t('orderDeleted')),
       onError: (e) => toast.error(getErrorMessage(e)),
@@ -222,7 +238,7 @@ export default function Orders() {
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => openReceiptWindow(order)} className="p-1.5 rounded-md hover:bg-muted transition-colors" title={t('printReceipt')}><Printer className="h-4 w-4 text-muted-foreground" /></button>
                       {canEdit && <Button variant="ghost" size="sm" onClick={() => openEdit(order)} className="text-xs">{t('editOrder')}</Button>}
-                      {order.status === 'completed' && canEdit && (
+                      {order.status === 'completed' && canRefund && (
                         <Button variant="ghost" size="sm" onClick={() => handleRefund(order)} className="text-xs text-destructive">{t('refund')}</Button>
                       )}
                       {canDelete && <button onClick={() => handleDelete(order)} className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" title={t('deleteOrder')}><Trash2 className="h-4 w-4 text-destructive" /></button>}

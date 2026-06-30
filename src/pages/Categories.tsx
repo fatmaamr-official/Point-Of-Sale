@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCategories } from '@/hooks/use-supabase-data';
 import { Search, Plus, Edit2, Trash2, Tags } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,9 @@ const getErrorMessage = (error: unknown) => {
 
 export default function Categories() {
   const queryClient = useQueryClient();
+  const { role } = useAuth();
+  const canEdit = role === 'admin' || role === 'manager';
+  const canDelete = role === 'admin';
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
@@ -76,6 +80,11 @@ export default function Categories() {
   }, [categories, search]);
 
   const handleSave = (formData: FormData) => {
+    if (!canEdit) {
+      toast.error('You do not have permission to edit categories');
+      return;
+    }
+
     const name = String(formData.get('name') ?? '').trim();
 
     if (!name) {
@@ -103,6 +112,11 @@ export default function Categories() {
   };
 
   const handleDelete = (category: Category) => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete categories');
+      return;
+    }
+
     if (!window.confirm(`Delete ${category.name}?`)) return;
 
     deleteCategory.mutate(category.id, {
@@ -134,7 +148,7 @@ export default function Categories() {
           <h1 className="text-2xl font-semibold tracking-tight">Categories</h1>
           <p className="text-sm text-muted-foreground mt-1">{categories.length} categories</p>
         </div>
-        <Button onClick={() => { setEditCategory(null); setDialogOpen(true); }}>
+        <Button onClick={() => { setEditCategory(null); setDialogOpen(true); }} disabled={!canEdit}>
           <Plus className="h-4 w-4 mr-2" /> Add Category
         </Button>
       </div>
@@ -170,12 +184,16 @@ export default function Categories() {
                     <td className="px-5 py-3 text-muted-foreground">{new Date(category.created_at).toLocaleDateString()}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => { setEditCategory(category); setDialogOpen(true); }} className="p-1.5 rounded-md hover:bg-muted transition-colors">
-                          <Edit2 className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                        <button onClick={() => handleDelete(category)} className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </button>
+                        {canEdit && (
+                          <button onClick={() => { setEditCategory(category); setDialogOpen(true); }} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+                            <Edit2 className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => handleDelete(category)} className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
