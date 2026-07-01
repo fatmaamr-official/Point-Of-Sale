@@ -38,6 +38,12 @@ const navItems = {
       icon: Tags,
     },
     {
+      titleKey: 'customers',
+      label: 'Customers',
+      url: '/customers',
+      icon: Users,
+    },
+    {
       titleKey: 'employees',
       label: 'Employees',
       url: '/employees',
@@ -89,6 +95,12 @@ const navItems = {
       icon: Tags,
     },
     {
+      titleKey: 'customers',
+      label: 'Customers',
+      url: '/customers',
+      icon: Users,
+    },
+    {
       titleKey: 'orders',
       label: 'Orders',
       url: '/orders',
@@ -114,6 +126,18 @@ const navItems = {
       label: 'POS',
       url: '/pos',
       icon: ShoppingCart,
+    },
+    {
+      titleKey: 'orders',
+      label: 'Orders',
+      url: '/orders',
+      icon: ClipboardList,
+    },
+    {
+      titleKey: 'customers',
+      label: 'Customers',
+      url: '/customers',
+      icon: Users,
     },
   ],
 } as const;

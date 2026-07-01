@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useCategories, useProducts, useOrderMutations } from '@/hooks/use-supabase-data';
+import { useCategories, useProducts, useOrderMutations, useCustomers } from '@/hooks/use-supabase-data';
 import { useCartStore, useNotificationStore } from '@/lib/store';
-import { Search, X, Minus, Plus, CreditCard, Banknote, Split, ScanBarcode, User, Calculator } from 'lucide-react';
+import { Search, X, Minus, Plus, CreditCard, Banknote, Split, ScanBarcode, User, Calculator, Users as UsersIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { openReceiptWindow } from '@/lib/receipt';
@@ -13,10 +14,12 @@ export default function POS() {
   const { t } = useTranslation();
   const { data: products = [] } = useProducts();
   const { data: categories = [] } = useCategories();
+  const { data: customers = [] } = useCustomers();
   const { addOrder, getNextOrderNumber } = useOrderMutations();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [cashTendered, setCashTendered] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<'cash' | 'card' | 'split' | null>(null);
@@ -24,6 +27,11 @@ export default function POS() {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const cart = useCartStore();
   const addNotification = useNotificationStore((s) => s.addNotification);
+
+  // Compute display name based on selected customer
+  const displayName = selectedCustomerId 
+    ? customers.find(c => c.id === selectedCustomerId)?.fullName || ''
+    : customerName || t('walkIn') || 'Walk-in Customer';
 
   const filtered = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
@@ -58,7 +66,8 @@ export default function POS() {
         discount: cart.discountAmount(),
         total: totalAmount,
         paymentMethod: method,
-        customerName: customerName || undefined,
+        customerId: selectedCustomerId || undefined,
+        customerName: selectedCustomerId ? undefined : (customerName || undefined),
       }, {
         onSuccess: () => {
           // Check low stock after order
@@ -82,11 +91,12 @@ export default function POS() {
             paymentMethod: method,
             status: 'completed',
             date: new Date().toISOString(),
-            customerName: customerName || undefined,
+            customerName: displayName,
           });
 
           cart.clearCart();
           setPaymentOpen(false);
+          setSelectedCustomerId(null);
           setCustomerName('');
           setCashTendered('');
           setSelectedMethod(null);
@@ -96,7 +106,7 @@ export default function POS() {
     } catch (e: any) {
       toast.error(e.message);
     }
-  }, [cart, addOrder, getNextOrderNumber, addNotification, t, customerName, products]);
+  }, [cart, addOrder, getNextOrderNumber, addNotification, t, selectedCustomerId, customerName, displayName, products]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -207,9 +217,36 @@ export default function POS() {
         {cart.items.length > 0 && (
           <div className="border-t border-border/50 p-4 space-y-3">
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder={t('customerNameOptional')} value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="pl-9 h-9 text-sm" />
+              <UsersIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              {customers.length > 0 ? (
+                <Select value={selectedCustomerId || 'walk-in'} onValueChange={(v) => {
+                  if (v === 'walk-in') {
+                    setSelectedCustomerId(null);
+                    setCustomerName('');
+                  } else {
+                    setSelectedCustomerId(v);
+                  }
+                }}>
+                  <SelectTrigger className="pl-9 h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="walk-in">{t('walkIn') || 'Walk-in Customer'}</SelectItem>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.fullName} ({c.phone})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input placeholder={t('customerNameOptional')} value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="pl-9 h-9 text-sm" />
+              )}
             </div>
+            {!selectedCustomerId && customers.length > 0 && (
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input placeholder={t('customerNameOptional')} value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="pl-9 h-9 text-sm" />
+              </div>
+            )}
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">{t('subtotal')}</span><span className="tabular-nums">${cart.subtotal().toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">{t('tax')} (9%)</span><span className="tabular-nums">${cart.taxAmount().toFixed(2)}</span></div>

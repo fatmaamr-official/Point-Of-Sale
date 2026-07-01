@@ -80,19 +80,29 @@ export interface CreateEmployeeResponse {
 export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
+    retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async ({ signal }) => {
-      const { data, error } = await db
-        .from('categories')
-        .select('id, name, created_at')
-        .order('name')
-        .abortSignal(signal);
-      if (error) throw error;
+      try {
+        const { data, error } = await db
+          .from('categories')
+          .select('id, name, created_at')
+          .order('name')
+          .abortSignal(signal);
+        if (error) {
+          console.error('Failed to load categories', error);
+          return [] as CategoryListItem[];
+        }
 
-      return (data ?? []).map((cat: any) => ({
-        id: cat.id,
-        name: cat.name,
-        createdAt: cat.created_at,
-      })) as CategoryListItem[];
+        return (data ?? []).map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          createdAt: cat.created_at,
+        })) as CategoryListItem[];
+      } catch (error) {
+        console.error('Failed to load categories', error);
+        return [] as CategoryListItem[];
+      }
     },
   });
 }
@@ -100,26 +110,36 @@ export function useCategories() {
 export function useProducts() {
   return useQuery({
     queryKey: ['products'],
+    retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async ({ signal }) => {
-      const { data, error } = await db
-        .from('products')
-        .select('*, categories(name)')
-        .order('name')
-        .abortSignal(signal);
-      if (error) throw error;
-      return (data ?? []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        barcode: p.barcode ?? null,
-        sku: p.sku,
-        price: Number(p.price),
-        cost: Number(p.cost),
-        stock: Number(p.stock),
-        categoryId: p.category_id ?? null,
-        categoryName: p.categories?.name ?? p.categories?.[0]?.name ?? 'Uncategorized',
-        image: p.image,
-        lowStockThreshold: p.low_stock_threshold,
-      })) as ProductListItem[];
+      try {
+        const { data, error } = await db
+          .from('products')
+          .select('*, categories(name)')
+          .order('name')
+          .abortSignal(signal);
+        if (error) {
+          console.error('Failed to load products', error);
+          return [] as ProductListItem[];
+        }
+        return (data ?? []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          barcode: p.barcode ?? null,
+          sku: p.sku,
+          price: Number(p.price),
+          cost: Number(p.cost),
+          stock: Number(p.stock),
+          categoryId: p.category_id ?? null,
+          categoryName: p.categories?.name ?? p.categories?.[0]?.name ?? 'Uncategorized',
+          image: p.image,
+          lowStockThreshold: p.low_stock_threshold,
+        })) as ProductListItem[];
+      } catch (error) {
+        console.error('Failed to load products', error);
+        return [] as ProductListItem[];
+      }
     },
   });
 }
@@ -182,38 +202,48 @@ export function useOrders() {
 
   return useQuery({
     queryKey: ['orders'],
+    retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async ({ signal }) => {
-      const response = await supabase
-        .from('orders')
-        .select('*, order_items!order_items_order_id_fkey(*)')
-        .order('created_at', { ascending: false })
-        .abortSignal(signal);
+      try {
+        const response = await supabase
+          .from('orders')
+          .select('*, order_items!order_items_order_id_fkey(*)')
+          .order('created_at', { ascending: false })
+          .abortSignal(signal);
 
-      if (response.error) throw response.error;
+        if (response.error) {
+          console.error('Failed to load orders', response.error);
+          return [] as any[];
+        }
 
-      const data = (response.data ?? []) as OrderWithItems[];
+        const data = (response.data ?? []) as OrderWithItems[];
 
-      console.log('RAW SUPABASE ORDERS RESPONSE:', data);
+        console.log('RAW SUPABASE ORDERS RESPONSE:', data);
 
-      return data.map((o) => ({
-        id: o.order_number,
-        dbId: o.id,
-        items: (o.order_items ?? []).map((item) => ({
-          productId: item.product_id,
-          name: item.product_name,
-          quantity: item.quantity,
-          price: Number(item.price),
-        })),
-        subtotal: Number(o.subtotal),
-        tax: Number(o.tax),
-        discount: Number(o.discount),
-        total: Number(o.total),
-        paymentMethod: o.payment_method as 'cash' | 'card' | 'split',
-        status: o.status as 'completed' | 'refunded' | 'partial-refund',
-        date: o.created_at,
-        customerName: o.customer_name ?? undefined,
-        cashierId: o.cashier_id ?? undefined,
-      }));
+        return data.map((o) => ({
+          id: o.order_number,
+          dbId: o.id,
+          items: (o.order_items ?? []).map((item) => ({
+            productId: item.product_id,
+            name: item.product_name,
+            quantity: item.quantity,
+            price: Number(item.price),
+          })),
+          subtotal: Number(o.subtotal),
+          tax: Number(o.tax),
+          discount: Number(o.discount),
+          total: Number(o.total),
+          paymentMethod: o.payment_method as 'cash' | 'card' | 'split',
+          status: o.status as 'completed' | 'refunded' | 'partial-refund',
+          date: o.created_at,
+          customerName: o.customer_name ?? undefined,
+          cashierId: o.cashier_id ?? undefined,
+        }));
+      } catch (error) {
+        console.error('Failed to load orders', error);
+        return [] as any[];
+      }
     },
   });
 }
@@ -230,7 +260,7 @@ export function useOrderMutations() {
       orderNumber: string;
       items: { productId: string; name: string; quantity: number; price: number }[];
       subtotal: number; tax: number; discount: number; total: number;
-      paymentMethod: string; customerName?: string;
+      paymentMethod: string; customerName?: string; customerId?: string;
     }) => {
       const { data, error } = await supabase.from('orders').insert({
         cashier_id: user?.id,
@@ -241,6 +271,7 @@ export function useOrderMutations() {
         total: order.total,
         payment_method: order.paymentMethod,
         customer_name: order.customerName ?? null,
+        customer_id: order.customerId ?? null,
         status: 'completed',
       }).select().single();
       if (error) throw error;
@@ -274,6 +305,7 @@ export function useOrderMutations() {
       status?: string;
       paymentMethod?: string;
       customerName?: string;
+      customerId?: string;
       items?: { productId: string; name: string; quantity: number; price: number }[];
       subtotal?: number;
       tax?: number;
@@ -284,6 +316,7 @@ export function useOrderMutations() {
       if (data.status !== undefined) updatePayload.status = data.status;
       if (data.paymentMethod !== undefined) updatePayload.payment_method = data.paymentMethod;
       if (data.customerName !== undefined) updatePayload.customer_name = data.customerName;
+      if (data.customerId !== undefined) updatePayload.customer_id = data.customerId;
 
       if (data.items !== undefined) {
         const subtotal = data.subtotal ?? data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -379,48 +412,61 @@ export function useEmployees(canViewSensitive: boolean = true) {
 
   return useQuery({
     queryKey: ['employees', canViewSensitive ? 'full' : 'public'],
+    retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async ({ signal }) => {
-      if (canViewSensitive) {
-        const { data, error } = await supabase.from('employees').select('*').order('name').abortSignal(signal);
-        if (error) throw error;
-        return (data ?? []).map((e) => ({
-          id: e.id,
-          name: e.name,
-          email: e.email,
-          role: e.role,
-          phone: e.phone ?? null,
-          position: e.position,
-          salary: Number(e.salary),
-          deductions: Number(e.deductions),
-          workingDays: Number(e.working_days),
-          attendance: Number(e.attendance),
-          absences: Number(e.absences),
-          status: e.status,
-          createdAt: e.created_at,
-          joinDate: e.join_date ?? e.created_at ?? '',
-          restricted: false,
-        })) as EmployeeListItem[];
-      }
+      try {
+        if (canViewSensitive) {
+          const { data, error } = await supabase.from('employees').select('*').order('name').abortSignal(signal);
+          if (error) {
+            console.error('Failed to load employees', error);
+            return [] as EmployeeListItem[];
+          }
+          return (data ?? []).map((e) => ({
+            id: e.id,
+            name: e.name,
+            email: e.email,
+            role: e.role,
+            phone: e.phone ?? null,
+            position: e.position,
+            salary: Number(e.salary),
+            deductions: Number(e.deductions),
+            workingDays: Number(e.working_days),
+            attendance: Number(e.attendance),
+            absences: Number(e.absences),
+            status: e.status,
+            createdAt: e.created_at,
+            joinDate: e.join_date ?? e.created_at ?? '',
+            restricted: false,
+          })) as EmployeeListItem[];
+        }
 
-      const { data, error } = await supabase.from('employees_public').select('*').order('name').abortSignal(signal);
-      if (error) throw error;
-      return ((data ?? []) as EmployeePublicRow[]).map((e) => ({
-        id: e.id ?? '',
-        name: e.name ?? '',
-        email: '',
-        role: (e.role ?? 'cashier') as AppRole,
-        phone: null,
-        position: e.position ?? '',
-        salary: 0,
-        deductions: 0,
-        workingDays: 0,
-        attendance: 0,
-        absences: 0,
-        status: e.status ?? 'active',
-        createdAt: e.created_at ?? '',
-        joinDate: e.join_date ?? e.created_at ?? '',
-        restricted: true,
-      })) as EmployeeListItem[];
+        const { data, error } = await supabase.from('employees_public').select('*').order('name').abortSignal(signal);
+        if (error) {
+          console.error('Failed to load employees', error);
+          return [] as EmployeeListItem[];
+        }
+        return ((data ?? []) as EmployeePublicRow[]).map((e) => ({
+          id: e.id ?? '',
+          name: e.name ?? '',
+          email: '',
+          role: (e.role ?? 'cashier') as AppRole,
+          phone: null,
+          position: e.position ?? '',
+          salary: 0,
+          deductions: 0,
+          workingDays: 0,
+          attendance: 0,
+          absences: 0,
+          status: e.status ?? 'active',
+          createdAt: e.created_at ?? '',
+          joinDate: e.join_date ?? e.created_at ?? '',
+          restricted: true,
+        })) as EmployeeListItem[];
+      } catch (error) {
+        console.error('Failed to load employees', error);
+        return [] as EmployeeListItem[];
+      }
     },
   });
 }
@@ -478,4 +524,93 @@ export function useEmployeeMutations() {
   });
 
   return { createEmployee, updateEmployee, deleteEmployee };
+}
+
+// ─── Customers ───
+export interface CustomerListItem {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export function useCustomers() {
+  return useQuery({
+    queryKey: ['customers'],
+    retry: false,
+    refetchOnWindowFocus: false,
+    queryFn: async ({ signal }) => {
+      try {
+        const { data, error } = await db
+          .from('customers')
+          .select('*')
+          .order('full_name')
+          .abortSignal(signal);
+        if (error) {
+          console.error('Failed to load customers', error);
+          return [] as CustomerListItem[];
+        }
+
+        return (data ?? []).map((c: any) => ({
+          id: c.id,
+          fullName: c.full_name,
+          phone: c.phone,
+          email: c.email ?? null,
+          address: c.address ?? null,
+          notes: c.notes ?? null,
+          createdAt: c.created_at,
+        })) as CustomerListItem[];
+      } catch (error) {
+        console.error('Failed to load customers', error);
+        return [] as CustomerListItem[];
+      }
+    },
+  });
+}
+
+export function useCustomerMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['customers'] });
+
+  const createCustomer = useMutation({
+    mutationFn: async (payload: { fullName: string; phone: string; email?: string | null; address?: string | null; notes?: string | null }) => {
+      const { error } = await db.from('customers').insert({
+        full_name: payload.fullName,
+        phone: payload.phone,
+        email: payload.email ?? null,
+        address: payload.address ?? null,
+        notes: payload.notes ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const updateCustomer = useMutation({
+    mutationFn: async ({ id, ...payload }: { id: string; fullName?: string; phone?: string; email?: string | null; address?: string | null; notes?: string | null }) => {
+      const updatePayload: Record<string, unknown> = {};
+      if (payload.fullName !== undefined) updatePayload.full_name = payload.fullName;
+      if (payload.phone !== undefined) updatePayload.phone = payload.phone;
+      if (payload.email !== undefined) updatePayload.email = payload.email;
+      if (payload.address !== undefined) updatePayload.address = payload.address;
+      if (payload.notes !== undefined) updatePayload.notes = payload.notes;
+
+      const { error } = await db.from('customers').update(updatePayload).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteCustomer = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from('customers').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { createCustomer, updateCustomer, deleteCustomer };
 }

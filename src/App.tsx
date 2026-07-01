@@ -11,6 +11,7 @@ import POS from "./pages/POS";
 import Products from "./pages/Products";
 import Categories from "./pages/Categories";
 import Orders from "./pages/Orders";
+import Customers from "./pages/Customers";
 import Employees from "./pages/Employees";
 import SettingsPage from "./pages/Settings";
 import Reports from "./pages/Reports";
@@ -35,7 +36,8 @@ const App = () => (
               <Route path="/pos" element={<ProtectedRoute allowedRoles={['admin', 'manager', 'cashier']}><POS /></ProtectedRoute>} />
               <Route path="/products" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Products /></ProtectedRoute>} />
               <Route path="/categories" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Categories /></ProtectedRoute>} />
-              <Route path="/orders" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Orders /></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute allowedRoles={['admin', 'manager', 'cashier']}><Orders /></ProtectedRoute>} />
+              <Route path="/customers" element={<ProtectedRoute allowedRoles={['admin', 'manager', 'cashier']}><Customers /></ProtectedRoute>} />
               <Route path="/employees" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Employees /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Reports /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><SettingsPage /></ProtectedRoute>} />
