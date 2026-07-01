@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, ShoppingCart, Package, ClipboardList, Settings, Moon, Sun, Store, Users, BarChart3, LogOut, Tags,
+  LayoutDashboard, ShoppingCart, Package, ClipboardList, Settings, Moon, Sun, Store, Users, BarChart3, LogOut, Tags, Truck,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -42,6 +42,12 @@ const navItems = {
       label: 'Customers',
       url: '/customers',
       icon: Users,
+    },
+    {
+      titleKey: 'suppliers',
+      label: 'Suppliers',
+      url: '/suppliers',
+      icon: Truck,
     },
     {
       titleKey: 'employees',
@@ -99,6 +105,12 @@ const navItems = {
       label: 'Customers',
       url: '/customers',
       icon: Users,
+    },
+    {
+      titleKey: 'suppliers',
+      label: 'Suppliers',
+      url: '/suppliers',
+      icon: Truck,
     },
     {
       titleKey: 'orders',
